@@ -1,14 +1,15 @@
+'use client';
 import './globals.css';
-
-export const metadata = {
-  title: 'Workout Progress Tracker',
-  description: 'Personal running & walking tracker with dashboard, analytics, and personal records.',
-};
+import { SessionProvider } from "next-auth/react";
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html>
+      <body>
+        <SessionProvider>
+          {children}
+        </SessionProvider>
+      </body>
     </html>
   );
 }
