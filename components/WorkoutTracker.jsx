@@ -1,4 +1,6 @@
 'use client';
+import UserProfileMenu from "./UserProfileMenu";
+import { useSession, signIn } from "next-auth/react";
 import React from "react";
 import "./storageShim.js";
 import { useState, useEffect, useMemo, createContext, useContext } from "react";
@@ -214,7 +216,26 @@ const SEED_WORKOUTS = [
   {srNo:64, date:"2026-07-17",workout:"Walking",distanceKm:5.19,time:"1:06:21",pace:"12:46",calories:270,pushups:null},
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Demo data (shown only to logged-out visitors — never real, never saved) ────
+// Generated relative to "today" so it never looks stale, and deliberately uses
+// different numbers/variety than SEED_WORKOUTS so it reads as an obvious sample,
+// not anyone's real history.
+function buildDemoWorkouts() {
+  const today = new Date();
+  const iso = (daysAgo) => { const d = new Date(today); d.setDate(d.getDate() - daysAgo); return toLocalIso(d); };
+  const rows = [
+    { daysAgo:13, workout:"Running", distanceKm:3.10, time:"18:40", pace:"6:01", calories:225 },
+    { daysAgo:12, workout:"Yoga",    distanceKm:0,    time:"30:00", pace:"0:00", calories:95  },
+    { daysAgo:10, workout:"Cycling", distanceKm:12.4, time:"38:15", pace:"3:05", calories:310 },
+    { daysAgo:9,  workout:"Walking", distanceKm:4.20, time:"48:00", pace:"11:26",calories:190 },
+    { daysAgo:7,  workout:"Running", distanceKm:5.05, time:"29:10", pace:"5:47", calories:365 },
+    { daysAgo:5,  workout:"Swimming",distanceKm:1.20, time:"35:00", pace:"29:10",calories:280 },
+    { daysAgo:4,  workout:"Walking", distanceKm:3.60, time:"41:00", pace:"11:23",calories:165 },
+    { daysAgo:2,  workout:"Cycling", distanceKm:15.8, time:"46:30", pace:"2:56", calories:395 },
+    { daysAgo:1,  workout:"Running", distanceKm:4.40, time:"25:05", pace:"5:42", calories:320 },
+  ];
+  return rows.map((r,i) => ({ srNo:i+1, date:iso(r.daysAgo), workout:r.workout, distanceKm:r.distanceKm, time:r.time, pace:r.pace, calories:r.calories, pushups:r.workout==="Running"&&r.daysAgo===1?15:null }));
+}
 // Local calendar date as YYYY-MM-DD (NOT toISOString, which is UTC-based and silently
 // shifts to the previous day for anyone in a timezone ahead of UTC, e.g. IST, during
 // early morning hours). Workout dates come from local <input type="date"> pickers, so
@@ -388,6 +409,7 @@ function computeComparison(entry,all) {
 
 // ── Time Range Picker ─────────────────────────────────────────────────────────
 function RangePicker({ value, onChange }) {
+  
   const dark = useDark();
   return (
     <div className="flex gap-1 flex-wrap">
@@ -407,6 +429,7 @@ function RangePicker({ value, onChange }) {
 
 // ── Tooltips ──────────────────────────────────────────────────────────────────
 function CustomTooltip({ active, payload }) {
+  
   const dark = useDark();
   if (!active || !payload?.length) return null;
   const pt = payload[0].payload;
@@ -419,6 +442,7 @@ function CustomTooltip({ active, payload }) {
   );
 }
 function DetailedTooltip({ active, payload, workouts }) {
+  
   const dark = useDark();
   if (!active || !payload?.length) return null;
   const entry = workouts.find(w => w.date === payload[0].payload.fullDate);
@@ -436,6 +460,7 @@ function DetailedTooltip({ active, payload, workouts }) {
 
 // ── Chart Card (shared by Dashboard + Analytics) ──────────────────────────────
 function ChartCard({ workouts, detailed, rangeKey, onRangeChange }) {
+ 
   const dark = useDark();
   const filtered = useMemo(() => filterByRange(workouts, rangeKey), [workouts, rangeKey]);
   // Collect all workout types present in the filtered set
@@ -497,6 +522,7 @@ function ChartCard({ workouts, detailed, rangeKey, onRangeChange }) {
 
 // ── Stat Cards ────────────────────────────────────────────────────────────────
 function StatCard({icon:Icon,label,value,subValue,bg,iconColor}) {
+ 
   const dark = useDark();
   return (
     <div className={`rounded-2xl border shadow-sm p-4 flex flex-col gap-3 ${t.card(dark)}`}>
@@ -512,6 +538,7 @@ function StatCard({icon:Icon,label,value,subValue,bg,iconColor}) {
   );
 }
 function HeatmapCard({workouts, streaks}) {
+  
   const dark = useDark();
   const [tooltip, setTooltip] = useState(null);
 
@@ -675,6 +702,7 @@ function HeatmapCard({workouts, streaks}) {
   );
 }
 function PRCard({pr}) {
+  
   const dark = useDark();
   if(!pr) return null;
   return (
@@ -689,6 +717,7 @@ function PRCard({pr}) {
   );
 }
 function MonthlyCard({monthly}) {
+ 
   const dark = useDark();
   if(!monthly) return null;
   return (
@@ -1075,6 +1104,7 @@ function RingProgress({ pct, size=92, stroke=9, color="#3B82F6", children }) {
 }
 
 function GoalCard({ period, workouts, goals, onSetGoal }) {
+  
   const dark = useDark();
   const [editing,     setEditing]     = useState(false);
   const [expanded,    setExpanded]    = useState(false);
@@ -1438,6 +1468,7 @@ function GoalCard({ period, workouts, goals, onSetGoal }) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 // Trend arrow badge — up=green, down=red
 function TrendBadge({ thisWeek, lastWeek, lowerIsBetter=false }) {
+  
   const dark = useDark();
   if (lastWeek === 0 || thisWeek === lastWeek) return null;
   const diff = thisWeek - lastWeek;
@@ -1457,6 +1488,7 @@ function TrendBadge({ thisWeek, lastWeek, lowerIsBetter=false }) {
 }
 
 function DashboardPage({workouts, stats, streaks, goals, onSetGoal, onNavigate, pr, onAddWorkout}) {
+  
   const dark = useDark();
   const themeId = useThemeId();
   const activeTheme = THEMES.find(x => x.id === themeId) || THEMES[0];
@@ -1662,6 +1694,7 @@ function DashboardPage({workouts, stats, streaks, goals, onSetGoal, onNavigate, 
 
 // ── History ───────────────────────────────────────────────────────────────────
 function HistoryTable({workouts,onEdit,onCopy,onDelete,copiedSrNo}) {
+  
   const dark = useDark();
   const [confirmSrNo,setConfirmSrNo] = useState(null);
   const sorted = [...workouts].sort((a,b)=>a.srNo-b.srNo);
@@ -1686,6 +1719,9 @@ function HistoryTable({workouts,onEdit,onCopy,onDelete,copiedSrNo}) {
                     {(() => { const WIcon = workoutIcon(w.workout, dark).Icon; return <WIcon size={12}/>; })()}
                     {w.workout}
                   </span>
+                  {w.source==="runkeeper" && (
+                    <span title="Imported from Runkeeper" className={`ml-1.5 inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded ${dark?"bg-gray-700 text-gray-300":"bg-slate-100 text-slate-500"}`}>RK</span>
+                  )}
                 </td>
                 <td className={`px-4 py-2.5 text-right font-mono ${t.value(dark)}`}>{w.distanceKm.toFixed(2)} km</td>
                 <td className={`px-4 py-2.5 text-right font-mono ${t.value(dark)}`}>{w.time}</td>
@@ -1806,6 +1842,7 @@ function HistoryPage({workouts,onEdit,onCopy,onDelete,copiedSrNo,initialTypeFilt
 
 // ── Add/Edit Form ─────────────────────────────────────────────────────────────
 function AddWorkoutForm({workouts,initialData,editSrNo,onSave,autoCloseOnSuccess}) {
+ 
   const dark = useDark();
   // If editing a custom workout (not in preset list), restore "Custom" + customName
   const isPreset = initialData ? WORKOUT_TYPES.slice(1).includes(initialData.workout) : true;
@@ -1887,6 +1924,7 @@ function AddWorkoutForm({workouts,initialData,editSrNo,onSave,autoCloseOnSuccess
 }
 
 function BulkAddForm({workouts,onBulkAdd}) {
+ 
   const dark = useDark();
   const [text,setText]=useState(""); const [parsed,setParsed]=useState([]); const [errors,setErrors]=useState([]); const [success,setSuccess]=useState(null);
   function parseLines(){
@@ -1921,7 +1959,173 @@ function BulkAddForm({workouts,onBulkAdd}) {
   );
 }
 
+// ── Runkeeper CSV import ───────────────────────────────────────────────────────
+// Parses the master "cardioActivities.csv" file from a Runkeeper data export
+// (Settings → Export Data on runkeeper.com). Handles quoted fields (commas
+// inside Route Name / Notes) and maps Runkeeper's columns onto this app's
+// workout shape. Everything happens client-side — no server, no API keys.
+function parseCsvRows(text) {
+  const rows = []; let row = []; let field = ""; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') { if (text[i+1] === '"') { field += '"'; i++; } else { inQuotes = false; } }
+      else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ""; }
+      else if (c === '\r') { /* skip */ }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 || (r[0] && r[0].trim()));
+}
+
+function parseRunkeeperCsv(text, workouts) {
+  const rows = parseCsvRows(text);
+  if (!rows.length) return { results: [], errors: [], skipped: 0 };
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const idx = (name) => header.findIndex(h => h === name);
+  const iActivityId = idx("activity id");
+  const iDate = idx("date");
+  const iType = idx("type");
+  const iDist = idx("distance (km)");
+  const iDur = idx("duration");
+  const iPace = idx("average pace");
+  const iCal = idx("calories burned");
+  if (iDate === -1 || iType === -1 || iDist === -1) {
+    return { results: [], errors: ["This doesn't look like a Runkeeper cardioActivities.csv file — expected columns like Date, Type, Distance (km)."], skipped: 0 };
+  }
+  // Dedup against whatever Runkeeper-sourced workouts are *currently* in the list —
+  // not a separate hidden memory. So deleting an imported entry makes it importable again.
+  const existingIds = new Set(workouts.filter(w => w.source === "runkeeper" && w.externalId).map(w => w.externalId));
+  const results = [], errors = [];
+  let skipped = 0;
+  let next = workouts.length ? Math.max(...workouts.map(w => w.srNo)) + 1 : 1;
+  for (let r = 1; r < rows.length; r++) {
+    const cols = rows[r];
+    if (!cols || cols.every(c => !c || !c.trim())) continue;
+    const activityId = iActivityId !== -1 ? (cols[iActivityId] || "").trim() : "";
+    if (activityId && existingIds.has(activityId)) { skipped++; continue; } // already in your workout list
+    const rawDate = (cols[iDate] || "").trim();
+    const iso = parseDateFlexible(rawDate.split(" ")[0]) || (rawDate.match(/^\d{4}-\d{2}-\d{2}/) ? rawDate.slice(0,10) : null);
+    if (!iso) { errors.push(`Row ${r+1}: can't parse date "${rawDate}".`); continue; }
+    const rawType = (cols[iType] || "").trim();
+    const matched = WORKOUT_TYPES.slice(1).find(t => t.toLowerCase() === rawType.toLowerCase());
+    const resolvedType = matched || (rawType || "Custom");
+    const km = parseFloat(cols[iDist]);
+    if (isNaN(km) || km <= 0) { errors.push(`Row ${r+1}: bad distance "${cols[iDist]}".`); continue; }
+    const durationRaw = iDur !== -1 ? (cols[iDur] || "").trim() : "";
+    const calRaw = iCal !== -1 ? parseInt(cols[iCal], 10) : NaN;
+    const cal = isNaN(calRaw) ? 0 : calRaw;
+    const paceRaw = iPace !== -1 ? (cols[iPace] || "").trim() : "";
+    results.push({
+      srNo: next++,
+      date: iso,
+      workout: resolvedType,
+      distanceKm: km,
+      time: durationRaw ? normalizeTimeDisplay(durationRaw) : "0:00",
+      pace: paceRaw ? normalizePaceDisplay(paceRaw) : "0:00",
+      calories: cal,
+      pushups: null,
+      source: "runkeeper",
+      externalId: activityId || null,
+      include: true, // review checkbox state
+    });
+  }
+  return { results, errors, skipped };
+}
+
+function RunkeeperImportForm({ workouts, onBulkAdd }) {
+  const dark = useDark();
+  const [parsed, setParsed] = useState([]);
+  const [errors, setErrors] = useState([]);
+  const [fileName, setFileName] = useState("");
+  const [success, setSuccess] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [skipped, setSkipped] = useState(0);
+
+  async function handleFile(file) {
+    if (!file) return;
+    setFileName(file.name); setSuccess(null); setBusy(true);
+    try {
+      const text = await file.text();
+      const { results, errors, skipped } = parseRunkeeperCsv(text, workouts);
+      setParsed(results); setErrors(errors); setSkipped(skipped);
+    } catch {
+      setErrors(["Could not read that file."]); setParsed([]); setSkipped(0);
+    } finally { setBusy(false); }
+  }
+
+  function toggleRow(srNo) {
+    setParsed(prev => prev.map(p => p.srNo === srNo ? { ...p, include: !p.include } : p));
+  }
+
+  function confirmImport() {
+    const toAdd = parsed.filter(p => p.include).map(({ include, ...rest }) => rest);
+    if (!toAdd.length) return;
+    onBulkAdd(toAdd);
+    setSuccess(`Imported ${toAdd.length} workout${toAdd.length === 1 ? "" : "s"} from Runkeeper.`);
+    setParsed([]); setErrors([]); setFileName(""); setSkipped(0);
+  }
+
+  const includedCount = parsed.filter(p => p.include).length;
+
+  return (
+    <div className="space-y-3">
+      <p className={`text-xs ${t.labelSm(dark)}`}>
+        On runkeeper.com go to Settings → Export Data, download the zip, and upload the <span className="font-mono">cardioActivities.csv</span> file from it here. You can re-export and re-upload anytime — anything already in your history is skipped automatically.
+      </p>
+      <label className={`flex flex-col items-center justify-center gap-1 border-2 border-dashed rounded-lg py-6 cursor-pointer text-sm ${dark ? "border-gray-700 text-gray-400 hover:bg-gray-800/50" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+        <Download size={18} />
+        {fileName || "Click to choose a .csv file"}
+        <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
+      </label>
+      {busy && <p className={`text-xs ${t.muted(dark)}`}>Reading file…</p>}
+      {!busy && fileName && parsed.length === 0 && errors.length === 0 && (
+        <div className={`border text-xs px-3 py-2 rounded-lg ${t.warnBox(dark)}`}>
+          {skipped > 0
+            ? `All ${skipped} activit${skipped===1?"y":"ies"} in this file are already in your workout history — nothing new to import.`
+            : "No activities found in this file."}
+        </div>
+      )}
+      {skipped > 0 && parsed.length > 0 && (
+        <p className={`text-xs ${t.muted(dark)}`}>{skipped} activit{skipped===1?"y":"ies"} already in your history were skipped.</p>
+      )}
+      {errors.length > 0 && <div className={`border text-xs px-3 py-2 rounded-lg space-y-0.5 max-h-32 overflow-y-auto ${t.errBox(dark)}`}>{errors.map((e, i) => <p key={i}>{e}</p>)}</div>}
+      {parsed.length > 0 && (
+        <>
+          <p className={`text-xs ${t.labelSm(dark)}`}>Review below, uncheck any you don't want, then confirm.</p>
+          <div className={`border rounded-lg overflow-hidden max-h-56 overflow-y-auto ${dark ? "border-gray-700" : "border-slate-100"}`}>
+            <table className="w-full text-xs">
+              <tbody>
+                {parsed.map(p => (
+                  <tr key={p.srNo} className={`border-b last:border-0 ${t.divider(dark)} ${!p.include ? "opacity-40" : ""}`}>
+                    <td className="px-2 py-1.5"><input type="checkbox" checked={p.include} onChange={() => toggleRow(p.srNo)} /></td>
+                    <td className={`px-2 py-1.5 ${t.value(dark)}`}>{formatDateDisplay(p.date)}</td>
+                    <td className={`px-2 py-1.5 ${t.value(dark)}`}>{p.workout}</td>
+                    <td className={`px-2 py-1.5 text-right font-mono ${t.value(dark)}`}>{p.distanceKm.toFixed(2)} km</td>
+                    <td className={`px-2 py-1.5 text-right font-mono ${t.value(dark)}`}>{p.time}</td>
+                    <td className={`px-2 py-1.5 text-right font-mono ${t.value(dark)}`}>{p.calories} kcal</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button type="button" onClick={confirmImport} disabled={!includedCount} className="bg-accent bg-accent-hover text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50">
+            Confirm Import {includedCount} Workout{includedCount === 1 ? "" : "s"}
+          </button>
+        </>
+      )}
+      {success && <div className={`flex items-center gap-2 border text-sm px-3 py-2 rounded-lg font-medium ${t.okBox(dark)}`}><CheckCircle2 size={16}/>{success}</div>}
+    </div>
+  );
+}
+
 function AddWorkoutModal({open,onClose,workouts,entry,isEdit,onSave,onBulkAdd}) {
+  
   const dark = useDark();
   const [mode,setMode]=useState("single");
   useEffect(()=>{if(open)setMode("single");},[open,entry]);
@@ -1935,16 +2139,18 @@ function AddWorkoutModal({open,onClose,workouts,entry,isEdit,onSave,onBulkAdd}) 
         </div>
         {!entry&&(
           <div className={`flex gap-1 mb-4 border-b ${t.nav(dark)}`}>
-            {["single","bulk"].map(m=>(
+            {["single","bulk","import"].map(m=>(
               <button key={m} onClick={()=>setMode(m)} className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${mode===m?t.navActive(dark):t.navInactive(dark)}`}>
-                {m==="single"?"Single Entry":"Bulk Paste"}
+                {m==="single"?"Single Entry":m==="bulk"?"Bulk Paste":"Import Runkeeper"}
               </button>
             ))}
           </div>
         )}
         {(entry||mode==="single")
           ?<AddWorkoutForm workouts={workouts} initialData={entry} editSrNo={isEdit?entry.srNo:null} onSave={onSave} autoCloseOnSuccess={onClose}/>
-          :<BulkAddForm workouts={workouts} onBulkAdd={onBulkAdd}/>}
+          :mode==="bulk"
+          ?<BulkAddForm workouts={workouts} onBulkAdd={onBulkAdd}/>
+          :<RunkeeperImportForm workouts={workouts} onBulkAdd={onBulkAdd}/>}
       </div>
     </div>
   );
@@ -1952,6 +2158,7 @@ function AddWorkoutModal({open,onClose,workouts,entry,isEdit,onSave,onBulkAdd}) 
 
 // ── Comparison / Analytics ────────────────────────────────────────────────────
 function DeltaRow({label,current,compareValue,lowerIsBetter}) {
+ 
   const dark = useDark();
   if(compareValue==null||isNaN(compareValue)) return(
     <div className={`flex items-center justify-between py-1.5 border-b last:border-0 ${t.divider(dark)}`}>
@@ -1971,6 +2178,7 @@ function DeltaRow({label,current,compareValue,lowerIsBetter}) {
   );
 }
 function CompareBlock({title,data,entry,paceSec}) {
+ 
   const dark = useDark();
   return(
     <div className={`border rounded-lg p-3 ${dark?"border-gray-700":"border-slate-100"}`}>
@@ -1980,6 +2188,7 @@ function CompareBlock({title,data,entry,paceSec}) {
   );
 }
 function ComparisonPanel({comparison}) {
+  
   const dark = useDark();
   if(!comparison?.entry) return<p className={`text-sm ${t.muted(dark)}`}>No workout selected.</p>;
   const{entry,paceSec,yesterday,prevWeekAvg,overallAvg}=comparison;
@@ -2002,6 +2211,7 @@ function ComparisonPanel({comparison}) {
 }
 
 function AnalyticsPage({workouts}) {
+ 
   const dark = useDark();
   const [rangeKey,setRangeKey]=useState("ALL");
   const sorted=useMemo(()=>[...workouts].sort((a,b)=>a.date.localeCompare(b.date)),[workouts]);
@@ -2039,6 +2249,7 @@ function AnalyticsPage({workouts}) {
 
 // ── Records ───────────────────────────────────────────────────────────────────
 function RecordStat({icon:Icon,label,value,sub,bg,bgDark,color}) {
+  
   const dark = useDark();
   return(
     <div className={`rounded-2xl border shadow-sm p-4 flex flex-col gap-3 ${t.card(dark)}`}>
@@ -2054,6 +2265,7 @@ function RecordStat({icon:Icon,label,value,sub,bg,bgDark,color}) {
   );
 }
 function Leaderboard({title,entries,valueFn}) {
+ 
   const dark = useDark();
   if(!entries.length) return null;
   return(
@@ -2109,25 +2321,30 @@ const RANK_METRICS = [
   { key:"currentStreak", label:"Streak",   unit:"days", fmt:v=>Math.round(v||0).toLocaleString() },
 ];
 const COMMON_COUNTRIES = ["United States","India","United Kingdom","Canada","Australia","Germany","France","Spain","Italy","Japan","China","Brazil","Mexico","South Africa","Nigeria","Netherlands","Sweden","Norway","Ireland","Singapore","United Arab Emirates","Indonesia","Philippines","Pakistan","Bangladesh","South Korea","New Zealand","Switzerland","Portugal","Poland","Turkey","Egypt","Kenya","Argentina","Colombia","Vietnam","Thailand","Malaysia"];
-function seedLeaderboardSample() {
-  return [
+// Demo leaderboard — shown ONLY to logged-out visitors, purely in-memory, never
+// written to storage. Once someone signs in, this never appears again — they see
+// exclusively real people who chose to join.
+function buildDemoLeaderboard() {
+  const rows = [
     { name:"Aarav Sharma",  country:"India",          city:"Pune",          totalDistance:312.4, totalCalories:18650, totalWorkouts:88,  currentStreak:9  },
     { name:"Priya Nair",    country:"India",          city:"Mumbai",        totalDistance:276.1, totalCalories:16200, totalWorkouts:71,  currentStreak:4  },
-    { name:"Rohan Iyer",    country:"India",          city:"Bengaluru",     totalDistance:198.7, totalCalories:11890, totalWorkouts:52,  currentStreak:2  },
     { name:"Jake Miller",   country:"United States",  city:"New York City", totalDistance:401.2, totalCalories:24310, totalWorkouts:110, currentStreak:14 },
     { name:"Emily Chen",    country:"United States",  city:"San Francisco", totalDistance:289.5, totalCalories:17040, totalWorkouts:79,  currentStreak:6  },
-    { name:"Marcus Reed",   country:"United States",  city:"Austin",        totalDistance:167.3, totalCalories:9870,  totalWorkouts:44,  currentStreak:1  },
-    { name:"Sophie Clarke", country:"United Kingdom",  city:"London",        totalDistance:233.9, totalCalories:13980, totalWorkouts:63,  currentStreak:5  },
+    { name:"Sophie Clarke", country:"United Kingdom", city:"London",        totalDistance:233.9, totalCalories:13980, totalWorkouts:63,  currentStreak:5  },
     { name:"Liam O'Brien",  country:"Australia",      city:"Sydney",        totalDistance:210.6, totalCalories:12500, totalWorkouts:57,  currentStreak:3  },
-    { name:"Hannah Weber",  country:"Germany",        city:"Berlin",        totalDistance:145.8, totalCalories:8640,  totalWorkouts:38,  currentStreak:0  },
     { name:"Kenji Sato",    country:"Japan",          city:"Tokyo",         totalDistance:256.3, totalCalories:15120, totalWorkouts:68,  currentStreak:11 },
   ];
+  return rows.map((r,i) => ({ id:`demo_${i}`, ...r }));
 }
-function LeaderboardPage({ stats, streaks }) {
+function LeaderboardPage({ stats, streaks, nickname }) {
+  
   const dark = useDark();
+  const { data: session } = useSession();
+  const myEmail = session?.user?.email || null;
+  const myKey = myEmail ? `leaderboard:${myEmail}` : null;
+
   const [ready, setReady]     = useState(false);
-  const [userId, setUserId]   = useState(null);
-  const [profile, setProfile] = useState(null); // {name,country,city}
+  const [profile, setProfile] = useState(null); // {name,country,city} — private, scoped to this account
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState({ name:"", country:"", city:"" });
   const [entries, setEntries] = useState([]);
@@ -2135,34 +2352,44 @@ function LeaderboardPage({ stats, streaks }) {
   const [filterCountry, setFilterCountry] = useState("All");
   const [filterCity, setFilterCity]       = useState("All");
 
-  // Load identity + profile + shared entries (seeding sample rows on the very first visit)
+  // Load my profile (tied to my real account) + the shared entries list (public —
+  // everyone using this app reads everyone else's, seeding sample rows on the very
+  // first visit). Also does a one-time, best-effort adoption of a pre-login
+  // anonymous row on this browser, so nobody's existing leaderboard history looks
+  // like it vanished or shows up twice under a stale random name.
   useEffect(() => {
     if (typeof window === "undefined" || !window.storage) { setReady(true); return; }
     let cancelled = false;
     (async () => {
       try {
-        let idRes = await window.storage.get("wt-user-id", false).catch(() => null);
-        let id = idRes?.value;
-        if (!id) {
-          id = "u_" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-          await window.storage.set("wt-user-id", id, false).catch(() => {});
+        if (myEmail) {
+          const profRes = await window.storage.get(`wt-profile:${myEmail}`, false).catch(() => null);
+          if (profRes?.value) {
+            if (!cancelled) setProfile(JSON.parse(profRes.value));
+          } else {
+            const claimed = await window.storage.get("wt-leaderboard-legacy-claimed", false).catch(() => null);
+            if (!claimed?.value) {
+              await window.storage.set("wt-leaderboard-legacy-claimed", "1", false).catch(() => {});
+              const legacyIdRes   = await window.storage.get("wt-user-id", false).catch(() => null);
+              const legacyProfRes = await window.storage.get("wt-profile", false).catch(() => null);
+              if (legacyProfRes?.value) {
+                const legacyProfile = JSON.parse(legacyProfRes.value);
+                await window.storage.set(`wt-profile:${myEmail}`, JSON.stringify(legacyProfile), false).catch(() => {});
+                if (!cancelled) setProfile(legacyProfile);
+                if (legacyIdRes?.value) window.storage.delete(`leaderboard:${legacyIdRes.value}`, true).catch(() => {});
+              }
+            }
+          }
         }
-        if (cancelled) return;
-        setUserId(id);
-
-        const profRes = await window.storage.get("wt-profile", false).catch(() => null);
-        if (!cancelled && profRes?.value) setProfile(JSON.parse(profRes.value));
 
         const listRes = await window.storage.list("leaderboard:", true).catch(() => null);
-        let keys = listRes?.keys || [];
-        if (keys.length === 0) {
-          const sample = seedLeaderboardSample();
-          await Promise.all(sample.map((row,i) =>
-            window.storage.set(`leaderboard:sample_${i}`, JSON.stringify(row), true).catch(() => {})
-          ));
-          keys = sample.map((_,i) => `leaderboard:sample_${i}`);
-        }
-        const fetched = await Promise.all(keys.map(k => window.storage.get(k, true).catch(() => null)));
+        const allKeys = listRes?.keys || [];
+        // Never show old placeholder rows as if they were real people — remove them
+        // from what's displayed, and best-effort delete them so they stop existing
+        // at all (one-time cleanup of earlier testing, harmless if already gone).
+        const realKeys = allKeys.filter(k => !k.startsWith("leaderboard:sample_"));
+        allKeys.filter(k => k.startsWith("leaderboard:sample_")).forEach(k => window.storage.delete(k, true).catch(() => {}));
+        const fetched = await Promise.all(realKeys.map(k => window.storage.get(k, true).catch(() => null)));
         if (!cancelled) {
           const parsed = fetched.filter(Boolean).map(r => {
             try { return { id:r.key, ...JSON.parse(r.value) }; } catch { return null; }
@@ -2173,12 +2400,19 @@ function LeaderboardPage({ stats, streaks }) {
       if (!cancelled) setReady(true);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [myEmail]);
 
-  // Publish/refresh my own row whenever I have a profile and my stats change
+  // First time joining (no profile yet): default the name field to the account's
+  // real nickname/display name rather than leaving it blank for anyone to fake.
   useEffect(() => {
-    if (!ready || !userId || !profile || typeof window === "undefined" || !window.storage) return;
-    const myKey = `leaderboard:${userId}`;
+    if (ready && myEmail && !profile) {
+      setDraft(d => d.name ? d : { ...d, name: nickname || session?.user?.name || "" });
+    }
+  }, [ready, myEmail, profile, nickname, session?.user?.name]);
+
+  // Publish/refresh my own row whenever I'm signed in, have a profile, and my stats change
+  useEffect(() => {
+    if (!ready || !myKey || !profile || typeof window === "undefined" || !window.storage) return;
     const payload = {
       name: profile.name, country: profile.country, city: profile.city,
       totalDistance: stats.totalDistance, totalCalories: stats.totalCalories,
@@ -2187,53 +2421,67 @@ function LeaderboardPage({ stats, streaks }) {
     };
     window.storage.set(myKey, JSON.stringify(payload), true).catch(() => {});
     setEntries(prev => [...prev.filter(e => e.id !== myKey), { id:myKey, ...payload }]);
-  }, [ready, userId, profile, stats.totalDistance, stats.totalCalories, stats.totalWorkouts, streaks.current]);
+  }, [ready, myKey, profile, stats.totalDistance, stats.totalCalories, stats.totalWorkouts, streaks.current]);
 
   function saveProfile() {
+    if (!myEmail) return;
     const name = draft.name.trim(), country = draft.country.trim(), city = draft.city.trim();
     if (!name || !country || !city) return;
     const p = { name, country, city };
     setProfile(p);
     setEditing(false);
     if (typeof window !== "undefined" && window.storage) {
-      window.storage.set("wt-profile", JSON.stringify(p), false).catch(() => {});
+      window.storage.set(`wt-profile:${myEmail}`, JSON.stringify(p), false).catch(() => {});
     }
   }
 
+  // Logged in → only people who actually joined (real, from storage).
+  // Logged out → the fixed in-memory demo set, computed once, never saved anywhere.
+  const demoEntries = useMemo(() => buildDemoLeaderboard(), []);
+  const rows = myEmail ? entries : demoEntries;
+
   const countries = useMemo(() => {
     const map = new Map();
-    entries.forEach(e => { if (e.country) map.set(e.country.toLowerCase(), e.country); });
+    rows.forEach(e => { if (e.country) map.set(e.country.toLowerCase(), e.country); });
     return Array.from(map.values()).sort();
-  }, [entries]);
+  }, [rows]);
   const cities = useMemo(() => {
     const map = new Map();
-    entries.forEach(e => {
+    rows.forEach(e => {
       if (e.country && e.city && (filterCountry==="All" || e.country.toLowerCase()===filterCountry.toLowerCase())) map.set(e.city.toLowerCase(), e.city);
     });
     return Array.from(map.values()).sort();
-  }, [entries, filterCountry]);
+  }, [rows, filterCountry]);
 
   const metric = RANK_METRICS.find(m => m.key === rankKey);
   const filtered = useMemo(() => {
-    return entries
+    return rows
       .filter(e => e.name)
       .filter(e => filterCountry==="All" || (e.country||"").toLowerCase()===filterCountry.toLowerCase())
       .filter(e => filterCity==="All" || (e.city||"").toLowerCase()===filterCity.toLowerCase())
       .sort((a,b) => (b[rankKey]||0) - (a[rankKey]||0));
-  }, [entries, filterCountry, filterCity, rankKey]);
+  }, [rows, filterCountry, filterCity, rankKey]);
 
-  const myId = userId ? `leaderboard:${userId}` : null;
+  const myId = myKey;
   const myRank = myId ? filtered.findIndex(e => e.id === myId) + 1 : 0;
 
   if (!ready) return <p className={`text-sm ${t.muted(dark)}`}>Loading leaderboard…</p>;
 
   return (
     <div className="space-y-5">
-      {!profile || editing ? (
+      {!myEmail ? (
+        <div className={`rounded-2xl border shadow-sm p-5 flex items-center justify-between gap-3 max-w-md ${t.card(dark)}`}>
+          <div>
+            <h3 className={`text-sm font-semibold flex items-center gap-1.5 ${t.value(dark)}`}><Globe size={16}/> Join the leaderboard</h3>
+            <p className={`text-xs mt-1 ${t.muted(dark)}`}>Sign in to appear in world rankings under your own name.</p>
+          </div>
+          <button onClick={()=>signIn()} className="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-lg bg-accent text-white bg-accent-hover">Sign in</button>
+        </div>
+      ) : !profile || editing ? (
         <div className={`rounded-2xl border shadow-sm p-5 space-y-3 max-w-md ${t.card(dark)}`}>
           <h3 className={`text-sm font-semibold flex items-center gap-1.5 ${t.value(dark)}`}><Globe size={16}/> Join the leaderboard</h3>
-          <p className={`text-xs ${t.muted(dark)}`}>Add your name and location to appear in world rankings. Self-reported — no account needed.</p>
-          <div className="space-y-2">
+          <p className={`text-xs ${t.muted(dark)}`}>Add your location to appear in world rankings. Your workout stats come straight from your account.</p>
+          <div className="space-y-2"> 
             <input value={draft.name} onChange={e=>setDraft(d=>({...d,name:e.target.value}))} placeholder="Your name" className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none ring-accent ${t.input(dark)}`}/>
             <input value={draft.country} onChange={e=>setDraft(d=>({...d,country:e.target.value}))} list="wt-countries" placeholder="Country (e.g. India)" className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none ring-accent ${t.input(dark)}`}/>
             <datalist id="wt-countries">{COMMON_COUNTRIES.map(c=><option key={c} value={c}/>)}</datalist>
@@ -2296,13 +2544,13 @@ function LeaderboardPage({ stats, streaks }) {
           })}
         </div>
       </div>
-      <p className={`text-[11px] ${t.muted(dark)}`}>Rankings are self-reported from data entered in this app and update as more people join from this link.</p>
+      <p className={`text-[11px] ${t.muted(dark)}`}>Rankings are calculated from workouts logged in each person's own account and update as more people join.</p>
     </div>
   );
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-function SettingsPage({workouts,onExport,onExportXlsx,onReset,dark,setDark,theme,setTheme}) {
+function SettingsPage({workouts,onExport,onExportXlsx,onExportPdf,onReset,dark,setDark,theme,setTheme}) {
   const [confirming,setConfirming]=useState(false);
   return(
     <div className="space-y-4 max-w-xl">
@@ -2354,13 +2602,14 @@ function SettingsPage({workouts,onExport,onExportXlsx,onReset,dark,setDark,theme
         <div className="flex flex-wrap gap-2">
           <button onClick={onExport} className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border ${dark?"border-gray-700 text-gray-300 hover:bg-gray-800":"border-slate-200 text-slate-600 hover:bg-slate-50"}`}><Download size={14}/> Export as JSON</button>
           <button onClick={onExportXlsx} className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border ${dark?"border-gray-700 text-gray-300 hover:bg-gray-800":"border-slate-200 text-slate-600 hover:bg-slate-50"}`}><Download size={14}/> Export as Excel</button>
+          <button onClick={onExportPdf} className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border ${dark?"border-gray-700 text-gray-300 hover:bg-gray-800":"border-slate-200 text-slate-600 hover:bg-slate-50"}`}><Download size={14}/> Export as PDF</button>
         </div>
       </div>
       <div className={`rounded-2xl border shadow-sm p-5 space-y-3 ${t.dangerBorder(dark)} ${t.card(dark)}`}>
         <h3 className="text-sm font-semibold text-red-500">Danger Zone</h3>
-        <p className={`text-xs ${t.muted(dark)}`}>Clears all saved data and reloads original seed history. Export a backup first.</p>
+        <p className={`text-xs ${t.muted(dark)}`}>Permanently deletes every workout in your account. Export a backup first.</p>
         {!confirming
-          ?<button onClick={()=>setConfirming(true)} className="text-sm px-3 py-1.5 rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/10">Reset to seed data</button>
+          ?<button onClick={()=>setConfirming(true)} className="text-sm px-3 py-1.5 rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/10">Clear All Workouts</button>
           :<div className="flex gap-2"><button onClick={()=>{onReset();setConfirming(false);}} className="text-sm px-3 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirm reset</button><button onClick={()=>setConfirming(false)} className={`text-sm px-3 py-1.5 rounded-lg border ${dark?"border-gray-700 text-gray-300":"border-slate-200 text-slate-600"}`}>Cancel</button></div>}
       </div>
     </div>
@@ -2369,6 +2618,7 @@ function SettingsPage({workouts,onExport,onExportXlsx,onReset,dark,setDark,theme
 
 // ── Milestone celebration toast (lightweight confetti burst) ──────────────────
 function MilestoneToast({ toast, onClose }) {
+  
   const dark = useDark();
   if (!toast) return null;
   const colors = ["#3B82F6","#22C55E","#F59E0B","#EF4444","#A855F7","#06B6D4"];
@@ -2416,6 +2666,7 @@ function MilestoneToast({ toast, onClose }) {
 
 function useNotifications(stats, pr, streaks, goals, workouts) {
   const [notifs, setNotifs] = useState([]);
+  
   const dark = useDark();
 
   // Load from storage on mount
@@ -2556,6 +2807,7 @@ const NOTIF_TYPE_STYLES = {
 };
 
 function NotificationCenter({ notifs, unreadCount, onMarkAllRead, onClear, onClearAll }) {
+ 
   const dark = useDark();
   const [open, setOpen] = useState(false);
   const panelRef = React.useRef(null);
@@ -2671,39 +2923,43 @@ function NotificationCenter({ notifs, unreadCount, onMarkAllRead, onClear, onCle
   );
 }
 
-function useMilestoneCelebration(stats) {
+function useMilestoneCelebration(stats, userEmail) {
   const [toast, setToast] = useState(null);
   useEffect(() => {
     if (!stats || !stats.totalWorkouts) return;
+    if (!userEmail) return; // demo mode: no milestone popups, nothing to track
     if (typeof window === "undefined" || !window.storage) return;
     let cancelled = false;
+    const kW = `wt-ms-workouts:${userEmail}`, kD = `wt-ms-distance:${userEmail}`;
     (async () => {
       try {
-        const seenWRes = await window.storage.get("wt-ms-workouts", false).catch(() => null);
+        const seenWRes = await window.storage.get(kW, false).catch(() => null);
         const seenW = parseInt(seenWRes?.value || "0", 10);
         const curW  = Math.floor(stats.totalWorkouts/25)*25;
         if (curW > 0 && curW > seenW) {
-          await window.storage.set("wt-ms-workouts", String(curW), false);
+          await window.storage.set(kW, String(curW), false);
           if (!cancelled) setToast({ emoji:"🎉", title:`${curW} workouts logged!`, sub:"Milestone unlocked" });
           return;
         }
-        const seenDRes = await window.storage.get("wt-ms-distance", false).catch(() => null);
+        const seenDRes = await window.storage.get(kD, false).catch(() => null);
         const seenD = parseInt(seenDRes?.value || "0", 10);
         const curD  = Math.floor(stats.totalDistance/100)*100;
         if (curD > 0 && curD > seenD) {
-          await window.storage.set("wt-ms-distance", String(curD), false);
+          await window.storage.set(kD, String(curD), false);
           if (!cancelled) setToast({ emoji:"🏆", title:`${curD} km lifetime!`, sub:"Milestone unlocked" });
         }
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [stats && stats.totalWorkouts, stats && stats.totalDistance]);
+  }, [stats && stats.totalWorkouts, stats && stats.totalDistance, userEmail]);
   return [toast, setToast];
 }
 
 // ── App Root ──────────────────────────────────────────────────────────────────
 export default function WorkoutTracker() {
-  const [workouts,setWorkouts]=useState([]);
+  
+  const { data: session } = useSession();
+  const [workouts, setWorkouts] = useState([]);
   const [loading,setLoading]=useState(true);
   const [activeTab,setActiveTab]=useState("dashboard");
   const [storageError,setStorageError]=useState(false);
@@ -2711,6 +2967,19 @@ export default function WorkoutTracker() {
   const [modalState,setModalState]=useState({open:false,entry:null,isEdit:false});
   const [dark,setDark]=useState(false);
   const [theme,setTheme]=useState(DEFAULT_THEME_ID);
+
+  const [nickname, setNickname] = useState('');
+
+useEffect(() => {
+  if (session?.user?.email) {
+    fetch('/api/user/profile', {
+      headers: { Authorization: `Bearer ${session.user.email}` }
+    })
+      .then(r => r.json())
+      .then(data => setNickname(data.nickname || ''))
+      .catch(e => console.error('Error fetching nickname:', e));
+  }
+}, [session]);
 
   // Persist theme preference (separate from dark mode — each theme keeps its own light/dark look)
   useEffect(()=>{
@@ -2736,23 +3005,45 @@ export default function WorkoutTracker() {
     window.storage.set("wt-dark",dark?"1":"0",false).catch(()=>{});
   },[dark]);
 
-  // Load workouts
+  // Load workouts — private per Google account once logged in; a fixed, obviously-
+  // fake demo set (never touching storage) while logged out.
   useEffect(()=>{
     let mounted=true;
     async function load(){
-      if(typeof window==="undefined"||!window.storage){if(mounted){setWorkouts(SEED_WORKOUTS);setLoading(false);}return;}
+      if(!session?.user?.email){
+        if(mounted){setWorkouts(buildDemoWorkouts());setLoading(false);}
+        return;
+      }
+      if(typeof window==="undefined"||!window.storage){if(mounted){setWorkouts([]);setLoading(false);}return;}
+      const userKey=`workouts:${session.user.email}`;
       try{
-        const r=await window.storage.get("workouts",false);
-        if(mounted){if(r?.value)setWorkouts(JSON.parse(r.value));else{setWorkouts(SEED_WORKOUTS);window.storage.set("workouts",JSON.stringify(SEED_WORKOUTS),false).catch(()=>{});}}
-      }catch{if(mounted){setWorkouts(SEED_WORKOUTS);window.storage.set("workouts",JSON.stringify(SEED_WORKOUTS),false).catch(()=>{});}}
+        const r=await window.storage.get(userKey,false);
+        if(r?.value){
+          if(mounted)setWorkouts(JSON.parse(r.value));
+        }else{
+          // First time this account has ever loaded its own bucket. One-time-only:
+          // claim the old shared "workouts" key (from before accounts were separated)
+          // so existing history isn't lost, then never touch that shared key again.
+          let initial=[];
+          const already=await window.storage.get("wt-legacy-claimed",false).catch(()=>null);
+          if(!already?.value){
+            const legacy=await window.storage.get("workouts",false).catch(()=>null);
+            if(legacy?.value)initial=JSON.parse(legacy.value);
+            await window.storage.set("wt-legacy-claimed","1",false).catch(()=>{});
+          }
+          if(mounted)setWorkouts(initial);
+          window.storage.set(userKey,JSON.stringify(initial),false).catch(()=>{});
+        }
+      }catch{if(mounted){setWorkouts([]);setStorageError(true);}}
       finally{if(mounted)setLoading(false);}
     }
     load();return()=>{mounted=false;};
-  },[]);
+  },[session?.user?.email]);
 
   async function persist(updated){
+    if(!session?.user?.email)return; // demo mode: interactive, but nothing is ever saved
     if(typeof window==="undefined"||!window.storage)return;
-    try{const r=await window.storage.set("workouts",JSON.stringify(updated),false);setStorageError(!r);}catch{setStorageError(true);}
+    try{const r=await window.storage.set(`workouts:${session.user.email}`,JSON.stringify(updated),false);setStorageError(!r);}catch{setStorageError(true);}
   }
 
   const openAddModal=()=>setModalState({open:true,entry:null,isEdit:false});
@@ -2792,18 +3083,29 @@ export default function WorkoutTracker() {
   }
   const closeModal=()=>setModalState({open:false,entry:null,isEdit:false});
 
-  async function handleSaveWorkout(entry,isEdit){try{setOpError(null);const u=isEdit?workouts.map(w=>w.srNo===entry.srNo?entry:w):[...workouts,entry];setWorkouts(u);await persist(u);}catch{setOpError("Could not save. Please try again.");}}
-  async function handleBulkAdd(entries){try{setOpError(null);const u=[...workouts,...entries];setWorkouts(u);await persist(u);}catch{setOpError("Could not save. Please try again.");}}
+  // Keeps the "No." column meaningful as a timeline: sorts by date (stable — same-date
+  // entries keep their relative order) and reassigns srNo 1..N. Needed because imports
+  // (e.g. a Runkeeper CSV export, which lists most-recent-first) or out-of-order bulk
+  // paste would otherwise leave srNo not matching date order.
+  function renumberByDate(list){
+    return list
+      .map((w,i)=>({w,i}))
+      .sort((a,b)=> (a.w.date<b.w.date?-1:a.w.date>b.w.date?1:a.i-b.i))
+      .map(({w},idx)=>({...w,srNo:idx+1}));
+  }
+  async function handleSaveWorkout(entry,isEdit){try{setOpError(null);const merged=isEdit?workouts.map(w=>w.srNo===entry.srNo?entry:w):[...workouts,entry];const u=renumberByDate(merged);setWorkouts(u);await persist(u);}catch{setOpError("Could not save. Please try again.");}}
+  async function handleBulkAdd(entries){try{setOpError(null);const u=renumberByDate([...workouts,...entries]);setWorkouts(u);await persist(u);}catch{setOpError("Could not save. Please try again.");}}
   async function handleDeleteWorkout(srNo){try{setOpError(null);const u=workouts.filter(w=>w.srNo!==srNo);setWorkouts(u);await persist(u);}catch{setOpError("Could not delete. Please try again.");}}
-  async function handleReset(){setWorkouts(SEED_WORKOUTS);await persist(SEED_WORKOUTS);}
-  // ── Goals state (persisted via window.storage — localStorage doesn't work in artifacts) ──
+  async function handleReset(){const resetTo=session?.user?.email?[]:buildDemoWorkouts();setWorkouts(resetTo);await persist(resetTo);}
+  // ── Goals state (private per account — same window.storage mechanism as workouts) ──
   const [goals, setGoals] = useState({});
   useEffect(()=>{
+    if(!session?.user?.email){setGoals({});return;} // demo mode: no saved goals
     if(typeof window==="undefined"||!window.storage)return;
     (async()=>{
-      try{const r=await window.storage.get("wt-goals",false);if(r?.value)setGoals(JSON.parse(r.value));}catch{}
+      try{const r=await window.storage.get(`wt-goals:${session.user.email}`,false);setGoals(r?.value?JSON.parse(r.value):{});}catch{}
     })();
-  },[]);
+  },[session?.user?.email]);
   function handleSetGoal(keyOrBatch, value) {
     // Accept either a single (key, value) call or a batch { key: value, ... } object
     const patch = typeof keyOrBatch === "object" ? keyOrBatch : { [keyOrBatch]: value };
@@ -2811,8 +3113,8 @@ export default function WorkoutTracker() {
     // Remove zero-value keys (used to delete goals)
     Object.keys(updated).forEach(k => { if (updated[k] === 0) delete updated[k]; });
     setGoals(updated);
-    if(typeof window!=="undefined"&&window.storage){
-      window.storage.set("wt-goals", JSON.stringify(updated), false).catch(()=>{});
+    if(session?.user?.email && typeof window!=="undefined"&&window.storage){
+      window.storage.set(`wt-goals:${session.user.email}`, JSON.stringify(updated), false).catch(()=>{});
     }
   }
 
@@ -2841,11 +3143,43 @@ export default function WorkoutTracker() {
     const a = document.createElement("a"); a.href=uri; a.download="workout_database.xls"; a.click();
   }
 
+  function handleExportPdf(){
+    // Opens a print-formatted report in a new tab and triggers the browser's print dialog,
+    // where the user picks "Save as PDF" — no extra PDF library needed.
+    const hdr = ["Sr.No","Date","Workout","Distance (km)","Time","Pace (min/km)","Calories","Push-ups"];
+    const rows = [...workouts].sort((a,b)=>a.srNo-b.srNo).map(w=>[
+      w.srNo, formatDateDisplay(w.date), w.workout,
+      w.distanceKm.toFixed(2), w.time, w.pace, w.calories, w.pushups??"—"
+    ]);
+    const reportTitle = `${displayName}'s Workout Database`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${reportTitle}</title>
+      <style>
+        body{font-family:-apple-system,Segoe UI,Arial,sans-serif;margin:32px;color:#1e293b;}
+        h1{font-size:20px;margin-bottom:2px;}
+        p.meta{color:#64748b;font-size:12px;margin-top:0;margin-bottom:20px;}
+        table{width:100%;border-collapse:collapse;font-size:12px;}
+        th{background:#1e3a5f;color:#fff;padding:8px 6px;text-align:left;}
+        td{padding:6px;border-bottom:1px solid #e2e8f0;}
+        tr:nth-child(even){background:#f8fafc;}
+        @media print { body{margin:12mm;} }
+      </style></head><body>
+      <h1>${reportTitle}</h1>
+      <p class="meta">${workouts.length} workouts • exported ${formatDateDisplay(toLocalIso(new Date()))}</p>
+      <table><thead><tr>${hdr.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table></body></html>`;
+    const win = window.open("", "_blank");
+    if (!win) { setOpError("Please allow pop-ups to export as PDF."); return; }
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  }
+
   const stats=useMemo(()=>computeStats(workouts),[workouts]);
   const streaks=useMemo(()=>computeStreaks(workouts),[workouts]);
   const pr=useMemo(()=>computePersonalRecords(workouts),[workouts]);
   const monthly=useMemo(()=>computeMonthlySummary(workouts),[workouts]);
-  const [milestoneToast, setMilestoneToast] = useMilestoneCelebration(stats);
+  const [milestoneToast, setMilestoneToast] = useMilestoneCelebration(stats, session?.user?.email);
   const {
     notifs, unreadCount, markAllRead, clearNotif, clearAll, addNotif
   } = useNotifications(stats, pr, streaks, goals, workouts);
@@ -2859,6 +3193,18 @@ export default function WorkoutTracker() {
   );
 
   const activeTheme = THEMES.find(x=>x.id===theme) || THEMES[0];
+  const getUserDisplayName = () => {
+  if (nickname) return nickname;
+  if (!session?.user?.email) return 'User';
+  const namePart = session.user.email.split('@')[0];
+  return namePart
+    .replace(/[0-9]/g, '')
+    .split(/[._-]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+const displayName = getUserDisplayName();
 
   return(
     <DarkContext.Provider value={dark}>
@@ -2894,7 +3240,7 @@ export default function WorkoutTracker() {
         .ring-accent-hover:hover{ box-shadow: 0 0 0 2px var(--accent-ring); }
         .shadow-accent-hover:hover{ box-shadow: 0 4px 14px 0 var(--accent-ring); }
       `}</style>
-      <div className={`min-h-screen font-sans transition-colors duration-200 relative ${t.page(dark)}`} style={themeVars(theme, dark)}>
+      <div className={`min-h-screen font-sans transition-colors duration-200 relative pt-1 ${t.page(dark)}`} style={themeVars(theme, dark)}>
 
         {/* Ambient glow layer — tinted from the active theme's own palette so the glass surfaces refract that theme, not a fixed color */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
@@ -2906,18 +3252,24 @@ export default function WorkoutTracker() {
         <MilestoneToast toast={milestoneToast} onClose={()=>setMilestoneToast(null)}/>
 
         {/* ── Floating header + nav ───────────────────────────────────────────── */}
-        <div className={`glass-surface fixed top-0 left-0 right-0 z-40 border-b backdrop-blur-xl ${t.header(dark)}`}>
+
+        <div className={`glass-surface sticky top-0 z-40 border-b backdrop-blur-xl ${t.header(dark)}`}>
           <div className="max-w-6xl mx-auto px-4">
-            {/* Top bar */}
+            {/* Top bar: title + stats + controls */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 pb-2">
               <div>
-                <h1 className={`text-base font-bold tracking-tight leading-tight ${t.value(dark)}`}>Workout Progress Tracker</h1>
-                <p className={`text-xs mt-0.5 ${t.muted(dark)}`}>{stats.totalWorkouts} workouts · {stats.totalDistance.toFixed(2)} km · {stats.totalCalories.toLocaleString()} kcal</p>
+                <h1 className={`text-base font-bold tracking-tight leading-tight ${t.value(dark)}`}>
+                  {session?.user?.email ? `${displayName} 's Workouts` : "Workout Progress Tracker"}
+                </h1>
+                <p className={`text-xs ${t.muted(dark)}`}>
+                  {workouts.length} {workouts.length===1?"workout":"workouts"} • {(stats?.totalDistance||0).toFixed(0)} km • {(stats?.totalCalories||0).toLocaleString()} kcal
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={()=>setDark(d=>!d)} className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${dark?"border-gray-700 text-yellow-400 hover:bg-gray-800":"border-slate-200 text-slate-500 hover:bg-slate-100"}`} title="Toggle dark mode">
-                  {dark?<Sun size={15}/>:<Moon size={15}/>}
-                </button>
+
+              {/* Right-side controls: bell, then add workout, then avatar — evenly spaced */}
+              <div className="flex items-center gap-5">
+
+                {/* Notification Bell — wired to the real notification center */}
                 <NotificationCenter
                   notifs={notifs}
                   unreadCount={unreadCount}
@@ -2925,24 +3277,62 @@ export default function WorkoutTracker() {
                   onClear={clearNotif}
                   onClearAll={clearAll}
                 />
-                <button onClick={openAddModal} className="flex items-center gap-1.5 text-sm font-medium px-3.5 py-1.5 rounded-lg bg-accent text-white bg-accent-hover focus:outline-none ring-accent">
-                  <Plus size={15}/> Add Workout
+
+                {/* Add Workout Button */}
+                <button
+                  onClick={openAddModal}
+                  className="flex items-center gap-1.5 text-sm font-medium px-3.5 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover"
+                >
+                  <Plus size={16} />
+                  Add Workout
                 </button>
+
+                {/* User Avatar — logged in: profile menu. Logged out: click to sign in */}
+                {session ? (
+                  <UserProfileMenu dark={dark} setDark={setDark} t={t} nickname={nickname} onNicknameChange={setNickname} onGoToSettings={() => setActiveTab("settings")} />
+                ) : (
+                  <button
+                    onClick={() => signIn()}
+                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm bg-slate-400 hover:bg-slate-500 transition-colors"
+                    title="Sign in"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                      <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.5c-3.3 0-9.8 1.6-9.8 4.9v2.4h19.6v-2.4c0-3.3-6.5-4.9-9.8-4.9z"/>
+                    </svg>
+                  </button>
+                )}
               </div>
+
             </div>
-            {/* Nav tabs */}
-            <nav className={`flex gap-1 overflow-x-auto`}>
-              {tabs.map(tab=>(
-                <button key={tab.id} onClick={()=>{setHistoryFilter(""); setActiveTab(tab.id);}} className={`px-3.5 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none ${activeTab===tab.id?t.navActive(dark):t.navInactive(dark)}`}>
+
+            {/* Navigation tabs */}
+            <div className="flex gap-6 pt-2 pb-1 border-t border-gray-200/20">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`text-sm font-medium pb-1 transition-colors ${
+                    activeTab === tab.id
+                      ? t.navActive(dark)
+                      : t.navInactive(dark)
+                  }`}
+                >
                   {tab.label}
                 </button>
               ))}
-            </nav>
+            </div>
           </div>
         </div>
 
+
         {/* ── Page content — padded to clear the floating header ─────────────── */}
-        <div className="max-w-6xl mx-auto px-4 pt-28 pb-8">
+        <div className="max-w-6xl mx-auto px-4 pt-[10px] pb-8">
+          {!session?.user?.email&&(
+            <div className={`mb-4 flex items-center justify-between gap-3 border text-sm px-4 py-2.5 rounded-lg ${t.warnBox(dark)}`}>
+              <span><strong>This is dummy data.</strong> Track your personal workout progress — sign in to start your own log.</span>
+              <button onClick={()=>signIn()} className="flex-shrink-0 text-xs font-semibold underline">Sign in</button>
+            </div>
+          )}
           {storageError&&<div className={`mb-4 border text-sm px-4 py-2.5 rounded-lg ${t.warnBox(dark)}`}>Last change couldn't be saved — use Export JSON as a backup.</div>}
           {opError&&<div className={`mb-4 border text-sm px-4 py-2.5 rounded-lg ${t.errBox(dark)}`}>{opError}</div>}
 
@@ -2950,8 +3340,8 @@ export default function WorkoutTracker() {
           {activeTab==="history"&&<HistoryPage workouts={workouts} onEdit={openEditModal} onCopy={openCopyModal} onDelete={handleDeleteWorkout} copiedSrNo={copiedSrNo} initialTypeFilter={historyFilter}/>}
           {activeTab==="analytics"&&<AnalyticsPage workouts={workouts}/>}
           {activeTab==="records"&&<RecordsPage workouts={workouts} pr={pr} streaks={streaks}/>}
-          {activeTab==="leaderboard"&&<LeaderboardPage stats={stats} streaks={streaks}/>}
-          {activeTab==="settings"&&<SettingsPage workouts={workouts} onExport={handleExport} onExportXlsx={handleExportXlsx} onReset={handleReset} dark={dark} setDark={setDark} theme={theme} setTheme={setTheme}/>}
+          {activeTab==="leaderboard"&&<LeaderboardPage stats={stats} streaks={streaks} nickname={nickname}/>}
+          {activeTab==="settings"&&<SettingsPage workouts={workouts} onExport={handleExport} onExportXlsx={handleExportXlsx} onExportPdf={handleExportPdf} onReset={handleReset} dark={dark} setDark={setDark} theme={theme} setTheme={setTheme}/>}
         </div>
 
         <AddWorkoutModal open={modalState.open} onClose={closeModal} workouts={workouts} entry={modalState.entry} isEdit={modalState.isEdit} onSave={handleSaveWorkout} onBulkAdd={handleBulkAdd}/>
