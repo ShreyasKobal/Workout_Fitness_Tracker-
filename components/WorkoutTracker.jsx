@@ -2138,9 +2138,9 @@ function AddWorkoutModal({open,onClose,workouts,entry,isEdit,onSave,onBulkAdd}) 
           <button onClick={onClose} className={`text-sm ${t.muted(dark)} hover:text-current`}>Close</button>
         </div>
         {!entry&&(
-          <div className={`flex gap-1 mb-4 border-b ${t.nav(dark)}`}>
+          <div className={`flex gap-1 mb-4 border-b overflow-x-auto no-scrollbar ${t.nav(dark)}`}>
             {["single","bulk","import"].map(m=>(
-              <button key={m} onClick={()=>setMode(m)} className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${mode===m?t.navActive(dark):t.navInactive(dark)}`}>
+              <button key={m} onClick={()=>setMode(m)} className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap flex-shrink-0 ${mode===m?t.navActive(dark):t.navInactive(dark)}`}>
                 {m==="single"?"Single Entry":m==="bulk"?"Bulk Paste":"Import Runkeeper"}
               </button>
             ))}
@@ -3239,6 +3239,8 @@ const displayName = getUserDisplayName();
         .ring-accent:focus{ box-shadow: 0 0 0 2px var(--accent-ring); outline: none; }
         .ring-accent-hover:hover{ box-shadow: 0 0 0 2px var(--accent-ring); }
         .shadow-accent-hover:hover{ box-shadow: 0 4px 14px 0 var(--accent-ring); }
+        .no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+        .no-scrollbar::-webkit-scrollbar{ display:none; }
       `}</style>
       <div className={`min-h-screen font-sans transition-colors duration-200 relative pt-1 ${t.page(dark)}`} style={themeVars(theme, dark)}>
 
@@ -3257,8 +3259,8 @@ const displayName = getUserDisplayName();
           <div className="max-w-6xl mx-auto px-4">
             {/* Top bar: title + stats + controls */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 pb-2">
-              <div>
-                <h1 className={`text-base font-bold tracking-tight leading-tight ${t.value(dark)}`}>
+              <div className="min-w-0">
+                <h1 className={`text-base font-bold tracking-tight leading-tight truncate ${t.value(dark)}`}>
                   {session?.user?.email ? `${displayName} 's Workouts` : "Workout Progress Tracker"}
                 </h1>
                 <p className={`text-xs ${t.muted(dark)}`}>
@@ -3267,7 +3269,7 @@ const displayName = getUserDisplayName();
               </div>
 
               {/* Right-side controls: bell, then add workout, then avatar — evenly spaced */}
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
 
                 {/* Notification Bell — wired to the real notification center */}
                 <NotificationCenter
@@ -3278,13 +3280,13 @@ const displayName = getUserDisplayName();
                   onClearAll={clearAll}
                 />
 
-                {/* Add Workout Button */}
+                {/* Add Workout Button — icon-only on very narrow screens so it never crowds the avatar */}
                 <button
                   onClick={openAddModal}
-                  className="flex items-center gap-1.5 text-sm font-medium px-3.5 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover"
+                  className="flex items-center gap-1.5 text-sm font-medium px-3 sm:px-3.5 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover flex-shrink-0"
                 >
                   <Plus size={16} />
-                  Add Workout
+                  <span className="hidden sm:inline">Add Workout</span>
                 </button>
 
                 {/* User Avatar — logged in: profile menu. Logged out: click to sign in */}
@@ -3305,13 +3307,13 @@ const displayName = getUserDisplayName();
 
             </div>
 
-            {/* Navigation tabs */}
-            <div className="flex gap-6 pt-2 pb-1 border-t border-gray-200/20">
+            {/* Navigation tabs — scrolls horizontally on narrow screens instead of overlapping */}
+            <div className="flex gap-4 sm:gap-6 pt-2 pb-1 border-t border-gray-200/20 overflow-x-auto no-scrollbar">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`text-sm font-medium pb-1 transition-colors ${
+                  className={`text-sm font-medium pb-1 whitespace-nowrap flex-shrink-0 transition-colors ${
                     activeTab === tab.id
                       ? t.navActive(dark)
                       : t.navInactive(dark)
